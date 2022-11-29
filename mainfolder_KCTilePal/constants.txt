@@ -1,0 +1,273 @@
+//Constants. You can change these to suit your ROM.
+
+/*
+This script file controls what KCTilePal does. 
+
+    For average users,
+        If you make a mistake here, your ROM could get destroyed. Also, it can make this program crash.
+        To restore this script file to defaults, simply delete it.
+
+    For the experts,
+        You can edit it to work with any ROM, if necessary.
+        It uses Game Maker's GML language. Many scripts are native to this program, and they won't get syntax highlighting
+*/
+
+//---------------------------------------------------------------------------------------------------------------------------------------------
+//Address offsets. Accepted input: Hexadecimal with dollar sign ($) ONLY
+offset_permute_cityfg = $1444A;
+offset_permute_forestfg = $1445A;
+offset_permute_forestbg = $1448A;
+offset_permute_mountainbg = $144AA;
+
+//Colour for transparent areas
+trans_colour = $FF00FF;
+
+//Theme names
+themen[0] = 'theme0';
+themen[1] = 'sky';
+themen[2] = 'ice';
+themen[3] = 'hill';
+themen[4] = 'island';
+themen[5] = 'desert';
+themen[6] = 'swamp';
+themen[7] = 'mountain';
+themen[8] = 'cave';
+themen[9] = 'forest';
+themen[10] = 'city';
+
+//File directories to use
+
+//Default ROM name and location
+romdir = ini_rstring('main','ROMPath',parameter_string(1));
+if (file_exists(parameter_string(1))){romdir = parameter_string(1)}
+
+//Set the destination folder
+maindir = program_directory+'\mainfolder_KCTilePal';
+//Art data
+artfg_dir = maindir+'\art\fg';
+artbg_dir = maindir+'\art\bg';
+//Mapping data    
+mapfg_dir = maindir+'\mapping\fg';
+mapbg_dir = maindir+'\mapping\bg';
+//Palette data    
+palfg_dir = maindir+'\palette\fg';
+palbg_dir = maindir+'\palette\bg';
+//Permutation
+palpm_dir = maindir+'\palette_permutation';
+
+//Make folders if they don't exist yet
+createdir(maindir);
+createdir(artfg_dir); 
+createdir(artbg_dir);
+createdir(mapfg_dir);  
+createdir(mapbg_dir);
+createdir(palfg_dir);
+createdir(palbg_dir);
+createdir(palpm_dir);
+
+//If the ROM isn't found, show file open dialog
+if !(file_exists(romdir))
+    {
+        wd_open_dialog_set_folder(program_directory);
+        wd_open_dialog_set_filter('ROM file|*.bin|All Files|*');
+        wd_open_dialog_set_caption('ROM to load graphics from...');
+        wd_open_dialog_show();
+        file_opened = wd_open_dialog_get_file();
+        //If the ROM is found, continue. Otherwise, end the program.
+        if (file_exists(file_opened))
+            {
+                romdir = file_opened;
+                ini_wstring('main','ROMPath',file_opened);
+            }
+            else
+            {
+                wd_message_simple('Cannot find your ROM. Sorry.');
+                game_end();
+            }
+    }
+
+    //Have a look in your ROM to see where all the art data is at and how much space it takes. Also take notes
+if (file_exists(romdir))
+    {
+        rco = file_bin_open(romdir,0);
+        
+        //Foreground theme art list offset. (Go to that offset to find the list's offset: $0007B018 > $0007B104 > (theme0, 1, 2...) == (00 08 0E 84, 00 08 0E 86, 00 08 2B 58))
+        //This is the start of the 4 byte offset list to each of the 10 themes (7B104)
+        offset_artfg_list_offset = getoffat(rco,$11D60);
+        offset_artfg_list = getoffat(rco,offset_artfg_list_offset);//ocha;
+        //Offset to first theme FG art (7B104 > leads to 80E84, the first theme's offset)
+        offset_artfg = getoffat(rco,offset_artfg_list);
+        //ArtBG list offset: $0007B01C > 0007B130 > (theme0, 1, 2...)
+        offset_artbg_list_offset = getoffat(rco,$11E66);
+        offset_artbg_list = getoffat(rco,offset_artbg_list_offset);
+        //ArtBG list offset is found at 7B130, so seek to $7B130 and read the 4 bytes (00 09 3C 94)
+        //93C94
+        offset_artbg = getoffat(rco,offset_artbg_list);
+        offset_artbg_end = getoffat(rco,getoffat(rco,$1202C));//BG art end: 9784A < 7B044 < 1202C
+        ochw = offset_artfg;
+        //Go to the list of offsets, we are about to scan through them to get file sizes. The last file is basically an educated guess.
+        //We know the offset to the first theme, so read the second one (+4)
+        file_bin_seek(rco,offset_artfg_list + 4);
+        ochp = 0;
+        for (i=0; i < 11; i += 1)
+            {
+                //Remember our previous offset each time
+                ochp = ochw;
+                //This offset leads us directly to the theme graphics
+                ochw = getoffat(rco,file_bin_position(rco));
+                //We want to find the length of each file, so find the offset and take the previous one from it
+                arto[i] = ochw - ochp;
+                //Take 1 from the last offset, since it's actually the offset for the start of the BG art
+                //if (i == 10){arto[i] = offset_artbg - 1;}
+                /*wd_message_simple('Previous offset: $'+dec_hex(ochp)+'
+Current offset: $'+dec_hex(ochw)+'
+Cur - Prev: $'+dec_hex(arto[i])+'');*/
+            }
+        //Load BG art offsets
+        file_bin_seek(rco,offset_artbg_list + 8);
+ochw = offset_artbg;
+        ochp = 0;
+        for (i=0; i < 13; i += 1)
+            {
+                //Remember our previous offset each time
+                ochp = ochw;
+                //This offset leads us directly to the theme graphics
+                ochw = getoffat(rco,file_bin_position(rco));
+                if (i == 12){ochw = (offset_artbg_end - 1);}
+                
+                //We want to find the length of each file, so find the offset and take the previous one from it
+                artbo[i] = ochw - ochp;
+                //wd_message_simple(dec_hex(artbo[i]));
+                //Take 1 from the last offset, since it's actually the offset for the start of the BG art
+                
+                /*wd_message_simple('Previous offset: $'+dec_hex(ochp)+'
+Current offset: $'+dec_hex(ochw)+'
+Cur - Prev: $'+dec_hex(artbo[i])+'');*/
+            }
+        
+        //FG theme mapping list offset. 7B020 > 7B168 > 7C4EC
+        //offset_mapfg_list_offset = getoffat(rco,$B3F0F);
+        offset_mapfg_list_offset = getoffat(rco,$11D14);
+        offset_mapfg_list = getoffat(rco,offset_mapfg_list_offset);
+        //FG theme mapping list- $7B168
+        offset_mapfg = getoffat(rco,offset_mapfg_list);
+        //Offset to first mapping file
+        ochw = offset_mapfg;
+        pre_offset_mapbg_list_offset = getoffat(rco,$12858);
+        pre_offset_mapbg_list = getoffat(rco,pre_offset_mapbg_list_offset);
+        offset_mapbg_list = getoffat(rco,pre_offset_mapbg_list);//$7B3E4
+        //$7B3E4 > $7B410 > $9B83C
+        offset_mapbg = getoffat(rco,offset_mapbg_list);
+        
+        file_bin_seek(rco,offset_mapfg_list + 4);
+        ochp = 0;
+        
+        //Read FG mapping offsets
+        for (i=0; i < 11; i += 1)
+            {
+                //Remember our previous offset each time
+                ochp = ochw;
+                //This offset leads us directly to the theme graphics
+                ochw = getoffat(rco,file_bin_position(rco));
+                
+                if !(i == 10)
+                    {mapo[i] = ochw - ochp;}
+                    else{mapo[i] = offset_artfg - ochp;}
+                //show_message('Mapping size: ;'+dec_hex(mapo[i])+';#Position: '+dec_hex(ochp));
+                    
+            }
+        file_bin_seek(rco,offset_mapbg_list + 4);
+        ochp = 0;
+        ochw = offset_mapbg;
+        //Read BG mapping offsets    
+        for (i=0; i < $9D; i += 1)
+            {
+                //Remember our previous offset each time
+                ochp = ochw;
+                //This offset leads us directly to the theme graphics
+                ochw = getoffat(rco,file_bin_position(rco));
+                if !(i == $9C)
+                    {mapbo[i] = ochw - ochp;}else{mapbo[i] = $5;}
+                    //Remove align from Sky
+                    //if (i == $19){mapbo[i]-=1;}if (i == $1A){mapbo[i]+=1;}
+                    //wd_message_simple('Mapping size: '+dec_hex(mapbo[i])+'Offset: '+dec_hex(ochp));
+                    
+            }
+        
+                //7B054 - 7B684
+offset_palfg_list = offset_artfg_list_offset + $3C;
+offset_palfg = getoffat(rco,offset_palfg_list);// + offset_artfg;
+offset_palbg_list = offset_artfg_list_offset + $68;//offset_palbg_list = $7B084;
+offset_palbg = getoffat(rco,offset_palbg_list);// + offset_artbg;
+offset_palbg_end = getoffat(rco,getoffat(rco,$14C96));//BG palette end: 14C96 > 7B0D4 > 7B8AC
+        
+        ochw = offset_palfg;
+file_bin_seek(rco,offset_palfg_list + 4);
+                //Palette FG offsets
+                for (i=0; i < 12; i += 1)
+            {
+                //Remember our previous offset each time
+                ochp = ochw;
+                //This offset leads us directly to the theme graphics
+                ochw = getoffat(rco,file_bin_position(rco));
+                
+                //if !(i == 11)
+                    {palo[i] = ochw - ochp;}//else {palo[i] = offset_artfg - ochp;}
+                    
+            }
+            
+        //Palette BG offsets
+        ochw = offset_palbg;
+file_bin_seek(rco,offset_palbg_list + 8);
+                //Palette BG offsets
+                for (i=0; i < 10; i += 1)
+            {
+                //Remember our previous offset each time
+                ochp = ochw;
+                //This offset leads us directly to the theme graphics
+                ochw = getoffat(rco,file_bin_position(rco));
+                // + (20 * (i == 9)));
+                //if (i == 10){ochw = offset_palbg_end - $10}
+                //if !(i == 11)
+                    {palbo[i] = ochw - ochp;}//else {palbo[i] = offset_artbg - ochp;}
+                    //wd_message_simple('Address at ('+string(i)+'): ' + dec_hex(ochw)+'; Size: '+dec_hex(palbo[i])+'; Old address: '+dec_hex(ochp));
+                    
+            }
+        /*palo[0] = $1E;
+        palo[1] = $1E;
+        palo[2] = $1E;
+        palo[3] = $1E;
+        palo[4] = $1E;
+        palo[5] = $1E;
+        palo[6] = $1E;
+        palo[7] = $3C;
+        palo[8] = $1E;
+        palo[9] = $1E;
+        palo[10] = $1E;*/
+        //Close the file!
+        file_bin_close(rco);
+        /*wd_message_simple('artfg: $'+dec_hex(offset_artfg)+'
+map: $'+dec_hex(offset_map)+'
+pal: $'+dec_hex(offset_palfg));*/
+    }
+else
+    {
+        offset_artfg = $80E84;
+        offset_mapfg = $7C4EC;
+        offset_palfg = $7B684;
+        offset_palbg = $7B7EC;
+        //Art offsets. Length of files are automatically chosen as the size of these offsets.
+        for (i=0; i<11; i+=1){arto[i]=0;}
+        //BG offsets
+        for (i=0; i<11; i+=1){artbo[i]=0;}
+
+        //Palette offsets
+        for (i=0; i<11; i+=1){palo[i]=0;}
+        //BG
+        for (i=0; i<11; i+=1){palbo[i]=0;}
+
+        //Mapping offsets\
+        for (i=0; i<11; i+=1){mapo[i]=0;}
+        for (i=0; i<33; i+=1){mapbo[i]=0;}
+        wd_message_simple('ROM not found');
+    }

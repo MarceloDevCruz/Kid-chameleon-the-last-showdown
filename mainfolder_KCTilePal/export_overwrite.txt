@@ -1,0 +1,228 @@
+/*This script file controls what KCTilePal does. 
+
+For average users,
+The program won't work properly if you make a mistake here.
+To restore this script file to defaults, simply delete it.
+
+For the experts,
+You can edit it to work with any ROM, if necessary. Some knowledge of programming would be needed to adapt this program for very advanced ROMs.
+It uses Game Maker's GML language, and allows arbitrary code execution.
+*/
+//---------------------------------------------------------------------------------------------------------------------------------------------
+//Update all offsets, since this could be a different ROM
+if (file_exists(maindir+'\constants'))
+    {
+        execute_file(maindir+'\constants.txt');
+    }
+
+binpos = $0;
+//Copy art data from ROM, but don't overwrite. This script relies on the data being sequential
+for (pz = 0; pz< 11; pz += 1)
+    {
+        gfile = artfg_dir+'\'+themen[pz]+'.bin';
+        if (file_exists(gfile)){file_delete(gfile);}
+        {
+            extract_from_rom(romdir,gfile,offset_artfg+binpos,arto[pz]); binpos += arto[pz];
+            //Theme0 is junk. It won't decompress, so ignore it here
+            if (pz > 0){file_decompress(gfile);}
+        }
+        
+    }
+
+binpos = $0;
+//Copy art data from ROM, but don't overwrite. This script relies on the data being sequential
+tnb = 0;
+for (pz = 0; pz< 13; pz += 1)
+    {
+        tnb += 1;//7,8: M,C
+        tnbs = '';
+        switch (pz) 
+            {
+                case 10: tnb = 8; tnbs = '_alt'; break;
+                case 11: tnb = 7; tnbs  = '_lightning'; break;
+                case 12: tnb = 3; tnbs = '_alt'; break;
+            }
+        
+        gfile = artbg_dir+'\'+themen[tnb]+tnbs+'.bin';
+        if (file_exists(gfile)){file_delete(gfile);}
+        {
+            extract_from_rom(romdir,gfile,offset_artbg+binpos,artbo[pz]); binpos += artbo[pz];
+            file_decompress(gfile);
+        }
+        
+    }
+    
+binpos = $0;
+//Copy palette data from ROM, but don't overwrite.
+for (pz = 0; pz< 11; pz += 1)
+    {
+        pfile = palfg_dir+'\'+themen[pz]+'.bin';
+        if (file_exists(pfile)){file_delete(pfile)}
+        {
+            extract_from_rom(romdir,pfile,offset_palfg+binpos,palo[pz]); binpos += palo[pz];
+        }
+        
+    }
+//Palette BG
+binpos = $0;
+tnb = 0;
+for (pz = 0; pz< 10; pz += 1)
+    {
+    tnb += 1;//7,8: M,C
+        /*tnbs = '';
+        switch (pz) 
+            {
+                case 8: tnb = 7; tnbs = '_storm'; break;
+                case 9: tnb = 7; tnbs  = '_lightning'; break;
+                case 10: tnb = 8; break;
+                case 11: tnb = 9; break;
+                case 12: tnb = 10; break;
+            }*/
+        pfile = palbg_dir+'\'+themen[tnb]+'.bin';
+        if (file_exists(pfile)){file_delete(pfile);}
+        {
+            extract_from_rom(romdir,pfile,offset_palbg+binpos,palbo[pz]);
+            binpos += palbo[pz];
+        }
+        
+    }
+
+binpos = 0;
+//Tile palette permutations (Hardcoded at the moment).
+pmfile = artfg_dir+'\'+themen[10]+'_permute.bin';
+if (file_exists(pmfile)){file_delete(pmfile);}
+extract_from_rom(romdir,pmfile,offset_permute_cityfg,$10); binpos += $10;
+
+pmfile = artfg_dir+'\'+themen[9]+'_permute.bin';
+if (file_exists(pmfile)){file_delete(pmfile);}
+extract_from_rom(romdir,pmfile,offset_permute_forestfg,$10); binpos += $10;
+
+pmfile = artbg_dir+'\'+themen[7]+'_m.bin';
+if !(file_exists(pmfile)){file_delete(pmfile);}
+extract_from_rom(romdir,pmfile,offset_permute_mountainbg,$10); binpos += $10;
+
+binpos = $0;
+//Copy mapping data from ROM
+for (pz = 0; pz< 11; pz += 1)
+    {
+        mfile = mapfg_dir+'\'+themen[pz]+'.bin';
+        if (file_exists(mfile)){file_delete(mfile)}
+        {
+            extract_from_rom(romdir,mfile,offset_mapfg+binpos,mapo[pz]); binpos += mapo[pz];
+        }
+        
+    }
+    
+//Extract BG chunk mapping
+binpos = $0;
+skew = 0;
+//Copy mapping data from ROM
+//Sky chunks
+for (pz = 0; pz< $20; pz += 1)
+    {
+        mfile = mapbg_dir+'\'+themen[1]+'_'+dec_hex(pz)+'.bin';
+        if (file_exists(mfile)){file_delete(mfile)}
+        {
+            extract_from_rom(romdir,mfile,offset_mapbg+binpos,mapbo[pz + skew]) binpos += mapbo[pz + skew];
+        }
+        
+    }
+skew = $20;
+//Ice chunks
+for (pz = 0; pz< $24; pz += 1)
+    {
+        mfile = mapbg_dir+'\'+themen[2]+'_'+dec_hex(pz)+'.bin';
+        if (file_exists(mfile)){file_delete(mfile)}
+        {
+            extract_from_rom(romdir,mfile,offset_mapbg+binpos,mapbo[pz + skew]) binpos += mapbo[pz + skew];
+        }
+        
+    }
+skew += $24;
+//Hill chunks
+for (pz = 0; pz< 3; pz += 1)
+    {
+        mfile = mapbg_dir+'\'+themen[3]+'_'+dec_hex(pz)+'.bin';
+        if (file_exists(mfile)){file_delete(mfile)}
+        {
+            if (extract_from_rom(romdir,mfile,offset_mapbg+binpos,mapbo[pz + skew])){enigma_ad(mfile);} binpos += mapbo[pz + skew];
+        }
+        
+    }
+skew += $3;
+//Island chunks
+for (pz = 0; pz< $D; pz += 1)
+    {
+        mfile = mapbg_dir+'\'+themen[4]+'_'+dec_hex(pz)+'.bin';
+        if (file_exists(mfile)){file_delete(mfile)}
+        {
+            extract_from_rom(romdir,mfile,offset_mapbg+binpos,mapbo[pz + skew]) binpos += mapbo[pz + skew];
+        }
+        
+    }
+skew += $D;
+//Desert chunks
+for (pz = 0; pz< $3; pz += 1)
+    {
+        mfile = mapbg_dir+'\'+themen[5]+'_'+dec_hex(pz)+'.bin';
+        if (file_exists(mfile)){file_delete(mfile)}
+        {
+            if (extract_from_rom(romdir,mfile,offset_mapbg+binpos,mapbo[pz + skew])){enigma_ad(mfile);} binpos += mapbo[pz + skew];
+        }
+        
+    }
+skew += $3;
+//Swamp chunks
+for (pz = 0; pz< $1B; pz += 1)
+    {
+        mfile = mapbg_dir+'\'+themen[6]+'_'+dec_hex(pz)+'.bin';
+        if (file_exists(mfile)){file_delete(mfile)}
+        {
+            extract_from_rom(romdir,mfile,offset_mapbg+binpos,mapbo[pz + skew]) binpos += mapbo[pz + skew];
+        }
+        
+    }
+skew += $1B;
+//Mountain chunks
+for (pz = 0; pz< $5; pz += 1)
+    {
+        mfile = mapbg_dir+'\'+themen[7]+'_'+dec_hex(pz)+'.bin';
+        if (file_exists(mfile)){file_delete(mfile)}
+        {
+            if (extract_from_rom(romdir,mfile,offset_mapbg+binpos,mapbo[pz + skew])){enigma_ad(mfile);} binpos += mapbo[pz + skew];
+        }
+        
+    }
+skew += $5;
+//Cave chunks
+for (pz = 0; pz< $15; pz += 1)
+    {
+        mfile = mapbg_dir+'\'+themen[8]+'_'+dec_hex(pz)+'.bin';
+        if (file_exists(mfile)){file_delete(mfile)}
+        {
+            extract_from_rom(romdir,mfile,offset_mapbg+binpos,mapbo[pz + skew]) binpos += mapbo[pz + skew];
+        }
+        
+    }
+skew += $15;
+//Forest chunks
+for (pz = 0; pz< $3; pz += 1)
+    {
+        mfile = mapbg_dir+'\'+themen[9]+'_'+dec_hex(pz)+'.bin';
+        if (file_exists(mfile)){file_delete(mfile)}
+        {
+            if (extract_from_rom(romdir,mfile,offset_mapbg+binpos,mapbo[pz + skew])){enigma_ad(mfile);} binpos += mapbo[pz + skew];
+        }
+        
+    }
+skew += $3;
+//City chunks
+for (pz = 0; pz< $E; pz += 1)
+    {
+        mfile = mapbg_dir+'\'+themen[10]+'_'+dec_hex(pz)+'.bin';
+        if (file_exists(mfile)){file_delete(mfile)}
+        {
+            extract_from_rom(romdir,mfile,offset_mapbg+binpos,mapbo[pz + skew]) binpos += mapbo[pz + skew];
+        }
+        
+    }

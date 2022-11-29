@@ -1,0 +1,37 @@
+/*This script file controls what KCTilePal does. 
+
+For average users,
+The program won't work properly if you make a mistake here.
+To restore this script file to defaults, simply delete it.
+
+For the experts,
+You can edit it to work with any ROM, if necessary. Some knowledge of programming would be needed to adapt this program for very advanced ROMs.
+It uses Game Maker's GML language, and allows arbitrary code execution.
+*/
+//---------------------------------------------------------------------------------------------------------------------------------------------
+binpos = $0;
+if (directory_exists(palfg_dir)) and (file_exists(romdir)){
+
+rbin = file_bin_open(romdir,1);
+
+//Insert data back into ROM, attempting to preserve ROM integrity
+for (xn=0; xn < 11; xn += 1)
+{
+pfile = palfg_dir+'\'+themen[xn]+'.bin';
+if (file_exists(pfile))
+    {
+        file_bin_seek(rbin,offset_palfg+binpos);
+        cmf = file_bin_open(pfile,0);
+        binsze = file_bin_size(cmf);
+        file_bin_close(cmf);
+        /*wd_message_simple(romdir+'
+        '+string(file_exists(pfile))+'; '+pfile+';
+Pos: '+dec_hex(offset_palfg+binpos))*/
+        //The second argument to this script sets a limit for the length of inserted data. Files larger than that value get truncated.
+        file_import(rbin,pfile,$1E);
+        binpos += palo[xn];
+        }
+}
+
+file_bin_close(rbin);
+}

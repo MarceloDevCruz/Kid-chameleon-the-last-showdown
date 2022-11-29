@@ -1,0 +1,34 @@
+/*This script file controls what KCTilePal does. 
+
+For average users,
+The program won't work properly if you make a mistake here.
+To restore this script file to defaults, simply delete it.
+
+For the experts,
+You can edit it to work with any ROM, if necessary. Some knowledge of programming would be needed to adapt this program for very advanced ROMs.
+It uses Game Maker's GML language, and allows arbitrary code execution.
+*/
+//---------------------------------------------------------------------------------------------------------------------------------------------
+binpos = $0;
+if (directory_exists(palbg_dir)) and (file_exists(romdir)){
+
+rbin = file_bin_open(romdir,1);
+
+//Import BG palettes
+binpos = $0;
+for (xn=0; xn < 10; xn += 1)
+{
+pfile = palbg_dir+'\'+themen[xn]+'.bin';
+if (file_exists(pfile))
+    {
+        file_bin_seek(rbin,offset_palbg+binpos);
+        cmf = file_bin_open(pfile,0);
+        binsze = file_bin_size(cmf);
+        file_bin_close(cmf);
+        //The second argument to this script sets a limit for the length of inserted data. Files larger than that value get truncated.
+        file_import(rbin,pfile,$10);
+        binpos += palbo[xn];
+        }
+}
+file_bin_close(rbin);
+}

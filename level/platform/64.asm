@@ -1,0 +1,12 @@
+	ptfm	47,132,0,30,0,70,0,2,1,0,PlatformScript_3C16-PlatformScript_BaseAddress
+	ptfm	55,123,0,30,0,70,0,2,1,0,PlatformScript_3BF2-PlatformScript_BaseAddress
+	ptfm	2,97,0,30,0,70,0,2,2,0,PlatformScript_3D46-PlatformScript_BaseAddress
+	ptfm	34,81,0,30,0,70,0,6,0,0,PlatformScript_388C-PlatformScript_BaseAddress
+	ptfm	35,55,0,30,0,71,0,2,1,0,PlatformScript_388C-PlatformScript_BaseAddress
+	ptfm	44,50,0,30,0,70,0,6,1,0,PlatformScript_366A-PlatformScript_BaseAddress
+	ptfm	54,50,0,30,0,70,0,6,1,0,PlatformScript_366A-PlatformScript_BaseAddress
+	ptfm	40,25,0,30,0,70,0,2,1,0,PlatformScript_3684-PlatformScript_BaseAddress
+	ptfm	44,25,0,30,0,70,0,2,1,0,PlatformScript_3684-PlatformScript_BaseAddress
+	ptfm	2,23,0,30,0,70,0,2,1,0,PlatformScript_3D74-PlatformScript_BaseAddress
+	ptfm	28,2,0,30,0,1,8,6,2,0,0
+	dc.w	$FFFF
